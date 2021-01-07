@@ -41,7 +41,6 @@ public enum ReorderSpacerCellStyle {
  The delegate of a `ReorderController` must adopt the `TableViewReorderDelegate` protocol. This protocol defines methods for handling the reordering of rows.
  */
 public protocol TableViewReorderDelegate: class {
-    
     /**
      Tells the delegate that the user has moved a row from one location to another. Use this method to update your data source.
      - Parameter tableView: The table view requesting this action.
@@ -79,11 +78,9 @@ public protocol TableViewReorderDelegate: class {
      - Parameter finalDestinationIndexPath: The final index path of the selected row.
      */
     func tableViewDidFinishReordering(_ tableView: UITableView, from initialSourceIndexPath: IndexPath, to finalDestinationIndexPath: IndexPath)
-    
 }
 
 public extension TableViewReorderDelegate {
-    
     func tableView(_ tableView: UITableView, canReorderRowAt indexPath: IndexPath) -> Bool {
         return true
     }
@@ -92,12 +89,9 @@ public extension TableViewReorderDelegate {
         return proposedDestinationIndexPath
     }
 
-    func tableViewDidBeginReordering(_ tableView: UITableView, at indexPath: IndexPath) {
-    }
+    func tableViewDidBeginReordering(_ tableView: UITableView, at indexPath: IndexPath) {}
     
-    func tableViewDidFinishReordering(_ tableView: UITableView, from initialSourceIndexPath: IndexPath, to finalDestinationIndexPath:IndexPath) {
-    }
-    
+    func tableViewDidFinishReordering(_ tableView: UITableView, from initialSourceIndexPath: IndexPath, to finalDestinationIndexPath: IndexPath) {}
 }
 
 // MARK: - ReorderController
@@ -106,7 +100,6 @@ public extension TableViewReorderDelegate {
  An object that manages drag-and-drop reordering of table view cells.
  */
 public class ReorderController: NSObject {
-    
     // MARK: - Public interface
     
     /// The delegate of the reorder controller.
@@ -198,7 +191,7 @@ public class ReorderController: NSObject {
     weak var tableView: UITableView?
     
     var reorderState: ReorderState = .ready(snapshotRow: nil)
-    var snapshotView: UIView? = nil
+    var snapshotView: UIView?
     
     var autoScrollDisplayLink: CADisplayLink?
     var lastAutoScrollTimeStamp: CFTimeInterval?
@@ -211,29 +204,36 @@ public class ReorderController: NSObject {
     }()
     
     // MARK: - Lifecycle
-    
+
     init(tableView: UITableView) {
         super.init()
         
         self.tableView = tableView
-        tableView.addGestureRecognizer(reorderGestureRecognizer)
+//        tableView.addGestureRecognizer(reorderGestureRecognizer)
         
         reorderState = .ready(snapshotRow: nil)
+    }
+    
+    public func setViewDrag(subView: UIView) {
+        reorderGestureRecognizer = UILongPressGestureRecognizer(target: self, action: #selector(handleReorderGesture))
+        reorderGestureRecognizer.delegate = self
+        reorderGestureRecognizer.minimumPressDuration = longPressDuration
+        subView.addGestureRecognizer(reorderGestureRecognizer)
     }
     
     // MARK: - Reordering
     
     func beginReorder(touchPosition: CGPoint) {
         guard case .ready = reorderState,
-            let delegate = delegate,
-            let tableView = tableView,
-            let superview = tableView.superview
+              let delegate = delegate,
+              let tableView = tableView,
+              let superview = tableView.superview
         else { return }
         
         let tableTouchPosition = superview.convert(touchPosition, to: tableView)
         
         guard let sourceRow = tableView.indexPathForRow(at: tableTouchPosition),
-            delegate.tableView(tableView, canReorderRowAt: sourceRow)
+              delegate.tableView(tableView, canReorderRowAt: sourceRow)
         else { return }
         
         createSnapshotViewForCell(at: sourceRow)
@@ -256,7 +256,7 @@ public class ReorderController: NSObject {
     }
     
     func updateReorder(touchPosition: CGPoint) {
-        guard case .reordering(let context) = reorderState else { return }
+        guard case let .reordering(context) = reorderState else { return }
         
         var newContext = context
         newContext.touchPosition = touchPosition
@@ -267,9 +267,9 @@ public class ReorderController: NSObject {
     }
     
     func endReorder() {
-        guard case .reordering(let context) = reorderState,
-            let tableView = tableView,
-            let superview = tableView.superview
+        guard case let .reordering(context) = reorderState,
+              let tableView = tableView,
+              let superview = tableView.superview
         else { return }
         
         reorderState = .ready(snapshotRow: context.destinationRow)
@@ -285,19 +285,18 @@ public class ReorderController: NSObject {
         }
         
         UIView.animate(withDuration: animationDuration,
-            animations: {
-                self.snapshotView?.center = CGPoint(x: cellRect.midX, y: cellRect.midY)
-            },
-            completion: { _ in
-                if case let .ready(snapshotRow) = self.reorderState, let row = snapshotRow {
-                    self.reorderState = .ready(snapshotRow: nil)
-                    UIView.performWithoutAnimation {
-                        tableView.reloadRows(at: [row], with: .none)
-                    }
-                    self.removeSnapshotView()
-                }
-            }
-        )
+                       animations: {
+                           self.snapshotView?.center = CGPoint(x: cellRect.midX, y: cellRect.midY)
+                       },
+                       completion: { _ in
+                           if case let .ready(snapshotRow) = self.reorderState, let row = snapshotRow {
+                               self.reorderState = .ready(snapshotRow: nil)
+                               UIView.performWithoutAnimation {
+                                   tableView.reloadRows(at: [row], with: .none)
+                               }
+                               self.removeSnapshotView()
+                           }
+                       })
         animateSnapshotViewOut()
         clearAutoScrollDisplayLink()
         
@@ -337,5 +336,4 @@ public class ReorderController: NSObject {
         
         return cell
     }
-    
 }

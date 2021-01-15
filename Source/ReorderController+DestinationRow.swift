@@ -46,10 +46,14 @@ extension ReorderController {
         
         delegate?.tableView(tableView, reorderRowAt: context.destinationRow, to: newContext.destinationRow)
         
-        tableView.beginUpdates()
-        tableView.deleteRows(at: [context.destinationRow], with: .fade)
-        tableView.insertRows(at: [newContext.destinationRow], with: .fade)
-        tableView.endUpdates()
+        if #available(iOS 13.0, *), newContext.destinationRow == IndexPath(row: 0, section: 0) {
+            tableView.reloadData()
+        } else {
+            tableView.beginUpdates()
+            tableView.deleteRows(at: [context.destinationRow], with: .fade)
+            tableView.insertRows(at: [newContext.destinationRow], with: .fade)
+            tableView.endUpdates()
+        }
     }
     
     func proposedNewDestinationRow() -> IndexPath? {
